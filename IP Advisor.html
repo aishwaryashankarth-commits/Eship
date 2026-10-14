@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IP Advisor</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--ink:#14213d;--mute:#5b6577;--line:#d5dbe3;--acc:#0b7a75;--ok:#1f7a4d;--mid:#a8730a;--bad:#b3342b;--un:#5b6577;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1624;--card:#18223a;--ink:#e8ecf4;--mute:#9aa6bd;--line:#2c3a58;--acc:#3cc3bb;--ok:#58c58d;--mid:#e0a63a;--bad:#ef7d74;--un:#9aa6bd}}
+:root[data-theme="dark"]{--bg:#0f1624;--card:#18223a;--ink:#e8ecf4;--mute:#9aa6bd;--line:#2c3a58;--acc:#3cc3bb;--ok:#58c58d;--mid:#e0a63a;--bad:#ef7d74;--un:#9aa6bd}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+h1{font:700 2rem/1.15 Georgia,"Times New Roman",serif;margin:0 0 4px}
+h2{font:700 1.3rem Georgia,serif;margin:0 0 4px}
+p.sub{color:var(--mute);margin:0 0 16px;max-width:65ch}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 24px}
+input[type=text]{flex:1 1 260px;padding:9px 11px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font:inherit}
+button{padding:9px 14px;border:1px solid var(--acc);background:var(--acc);color:#fff;border-radius:6px;font:600 .95rem system-ui;cursor:pointer}
+button.alt{background:transparent;color:var(--acc)}
+:focus-visible{outline:3px solid var(--mid);outline-offset:2px}
+section.area{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--acc);border-radius:4px;padding:16px 18px;margin-bottom:18px}
+.q{padding:12px 0;border-top:1px solid var(--line)}
+.q:first-of-type{border-top:0}
+.q .t{margin:0 0 6px}
+.q .law{color:var(--mute);font-size:.85rem}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opts label{border:1px solid var(--line);border-radius:6px;padding:5px 14px;cursor:pointer;background:var(--bg)}
+.opts input{margin-right:6px}
+.opts label:has(input:checked){border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc);font-weight:600}
+#out{margin-top:28px}
+.res{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:16px 18px;margin-bottom:16px}
+.badge{display:inline-block;padding:2px 10px;border-radius:99px;font:600 .85rem system-ui;border:1.5px solid currentColor}
+.Strong{color:var(--ok)}.Mostly{color:var(--ok)}.Needs{color:var(--mid)}.Risk{color:var(--bad)}.NA{color:var(--un)}
+.res ul{margin:8px 0 0;padding-left:20px}.res li{margin:5px 0}
+.pri{font-weight:600}
+.disc{color:var(--mute);font-size:.85rem;margin-top:24px;max-width:70ch}
+@media print{.bar,section.area,button{display:none}body{background:#fff}}
+</style></head><body><main>
+<h1 id="h1">IP Advisor</h1>
+<p class="sub">Answer fact questions about a technology project. The app scores exposure under patent, trade secret, trademark and copyright law, considers AI and ownership issues, and lists protective steps in priority order.</p>
+<div class="bar">
+<input type="text" id="names" aria-label="Team last names" placeholder="Team last names, e.g. Smith, Jones, Lee">
+<button id="demo">Load Brainy Games case</button><button class="alt" id="clear">Clear answers</button>
+</div>
+<div id="form"></div>
+<button id="go">Analyze project</button> <button class="alt" id="print">Print report</button>
+<div id="out" aria-live="polite"></div>
+<p class="disc">Educational tool for a course project. Output is a rule-based screening of U.S. law, not legal advice. Consult a licensed IP attorney before relying on it.</p>
+<script>
+// good = answer that signals protection is in good shape ('y' or 'n'); w = weight (2 = critical)
+const AREAS=[
+["pat","Patent (35 U.S.C. §§ 101-103, 112)"],
+["ts","Trade secret (DTSA 18 U.S.C. § 1836; UTSA)"],
+["tm","Trademark (Lanham Act, 15 U.S.C. § 1051 et seq.)"],
+["cr","Copyright (17 U.S.C. §§ 102, 201, 411)"],
+["ai","AI use and ownership"]];
+const Q=[
+{id:"p1",a:"pat",t:"Is the core innovation a process, machine, or system (not only a method of organizing information)?",good:"y",w:2,law:"§ 101",bad:"Subject matter is doubtful: only processes, machines, manufactures and compositions qualify.",act:"Frame claims around the concrete apparatus and technical process, such as the scanner, hardware architecture and feedback loop."},
+{id:"p2",a:"pat",t:"Does it do more than apply an abstract idea or natural phenomenon (for example, brain-pleasure correlations) with generic computing?",good:"y",w:2,law:"Alice v. CLS Bank; Mayo v. Prometheus",bad:"High § 101 risk: claims that recite a brain-response law or a generic 'apply it on a computer' step are often invalidated.",act:"Draft claims to the specific technical improvement (sensor data to real-time rendering changes) and avoid claiming the correlation alone."},
+{id:"p3",a:"pat",t:"Has the invention been kept free of public disclosure, sale, or offer for sale?",good:"y",w:2,law:"§ 102; one-year U.S. grace period",bad:"A prior disclosure starts the U.S. one-year clock and may destroy novelty in most other countries (absolute novelty).",act:"File at least a provisional application before any disclosure; calendar the 12-month deadline to convert."},
+{id:"p4",a:"pat",t:"Is a journal article, talk, or demo planned before a patent application is filed?",good:"n",w:2,law:"§ 102(a)(1), (b)(1)",bad:"Planned publication before filing risks loss of patent rights abroad and puts the U.S. grace period on a countdown.",act:"File first, then publish. Have counsel review the manuscript for enabling detail."},
+{id:"p5",a:"pat",t:"Is the approach non-obvious compared with prior fNIRS and game neuroscience work?",good:"y",w:1,law:"§ 103; Graham v. John Deere; KSR v. Teleflex",bad:"Obviousness is unresolved. Combining known sensing with known game tuning may be seen as predictable.",act:"Commission a prior-art search and document the unexpected results of closed-loop, real-time redesign."},
+{id:"p6",a:"pat",t:"Can the team describe the invention in enough detail for a skilled person to make and use it?",good:"y",w:1,law:"§ 112(a)",bad:"Enablement and written description may fall short.",act:"Keep lab notebooks and write a detailed specification with embodiments."},
+{id:"t1",a:"ts",t:"Does the method or data derive economic value from not being generally known?",good:"y",w:2,law:"18 U.S.C. § 1839(3)",bad:"Without independent economic value from secrecy, no trade secret exists.",act:"Identify and catalog which elements (model weights, tuning data, parameters) are valuable because secret."},
+{id:"t2",a:"ts",t:"Are reasonable secrecy measures in place (NDAs, access controls, marking)?",good:"y",w:2,law:"§ 1839(3)(A)",bad:"Reasonable measures are an element of the claim; lacking them forfeits protection.",act:"Adopt NDAs, restricted repositories, access logs and a written secrecy policy."},
+{id:"t3",a:"ts",t:"Will publication or product release expose the secret method?",good:"n",w:2,law:"Ruckelshaus v. Monsanto; patent publication at 18 months",bad:"Public disclosure ends trade secret status. Patent publication does too.",act:"Decide per element: patent and disclose, or keep secret. Publish only non-secret results."},
+{id:"t4",a:"ts",t:"Could competitors reverse-engineer the method from the released game?",good:"n",w:1,law:"Reverse engineering is lawful (Kewanee; UTSA cmt.)",bad:"Reverse engineering of a released product is not misappropriation.",act:"Keep the process and training data server-side, and rely on patents for what a shipped game would reveal."},
+{id:"t5",a:"ts",t:"Are employees, collaborators and test subjects bound by confidentiality agreements?",good:"y",w:1,law:"DTSA § 1833(b) whistleblower notice",bad:"Unbound insiders and visitors can leak without a contractual remedy.",act:"Execute NDAs and invention assignments, with DTSA immunity notice language in employee agreements."},
+{id:"m1",a:"tm",t:"Is the proposed name inherently distinctive (fanciful, arbitrary, or suggestive) rather than descriptive of games?",good:"y",w:2,law:"Abercrombie spectrum; § 1052(e)(1)",bad:"A merely descriptive mark cannot register without secondary meaning.",act:"Evaluate 'Brainy Games' on the spectrum ('Brainy' is suggestive, 'Games' generic and likely disclaimed); consider a more distinctive coined mark."},
+{id:"m2",a:"tm",t:"Is the mark in use in commerce, or is there a bona fide intent to use it?",good:"y",w:1,law:"§ 1051(a), (b)",bad:"Rights flow from use, or from a documented intent to use.",act:"Keep records of intent and first use, with dates and specimens."},
+{id:"m3",a:"tm",t:"Has a clearance search (USPTO, state, common law, app stores) been done?",good:"y",w:2,law:"§ 1114; likelihood of confusion (DuPont factors)",bad:"No clearance search leaves infringement and rebranding risk.",act:"Run a full search in Classes 9, 41 and 42 before launching, and review results with counsel."},
+{id:"m4",a:"tm",t:"Does a similar mark already exist for related games or software?",good:"n",w:2,law:"§ 1052(d); Polaroid / DuPont factors",bad:"A confusingly similar prior mark can block registration and support an infringement claim.",act:"Assess similarity of marks, goods and channels; consider coexistence terms or rebranding."},
+{id:"m5",a:"tm",t:"Do you plan to register the mark (intent-to-use application) before launch?",good:"y",w:1,law:"§ 1051(b); § 1057(c) constructive priority",bad:"Unregistered marks get narrower, local-use rights.",act:"File an intent-to-use application; priority relates back to the filing date."},
+{id:"c1",a:"cr",t:"Will the game include original expression (code, art, music, narrative) fixed in a tangible form?",good:"y",w:1,law:"§ 102(a); Feist v. Rural",bad:"Only original, fixed expression is protected.",act:"Document and save all expressive elements as they are created."},
+{id:"c2",a:"cr",t:"Is the main value in rules, mechanics, or the design method rather than expression?",good:"n",w:2,law:"§ 102(b); Baker v. Selden; Tetris v. Xio",bad:"Copyright does not protect ideas, methods or mechanics, so it won't protect the core design method.",act:"Rely on patent and trade secret for the method; use copyright for code, art and audiovisual output."},
+{id:"c3",a:"cr",t:"Will AI generate significant game art or code with little human selection, arrangement or modification?",good:"n",w:2,law:"Thaler v. Perlmutter (D.C. Cir. 2025); Copyright Office AI Report Pt. 2 (Jan. 2025)",bad:"Purely AI-generated material is not copyrightable; only human-authored contributions and creative arrangement qualify.",act:"Record human prompts, edits and selection; disclose AI-generated parts in registrations and exclude them."},
+{id:"c4",a:"cr",t:"Are all contributors' rights assigned or work-for-hire, and third-party assets licensed?",good:"y",w:2,law:"§§ 101, 201(b), 204(a)",bad:"Without written assignments or licenses, contributors may co-own or retain rights.",act:"Use signed assignments and a license register for fonts, engines, music and assets."},
+{id:"c5",a:"cr",t:"Will works be registered promptly after creation?",good:"y",w:1,law:"§§ 411(a), 412; Fourth Estate v. Wall-Street.com",bad:"Registration is required before suing and affects statutory damages and fees.",act:"Register the game, code and key assets, with timely registration of each release."},
+{id:"a1",a:"ai",t:"Did named humans make a significant contribution to conceiving each claimed invention (not just running the AI)?",good:"y",w:2,law:"Thaler v. Vidal (Fed. Cir. 2022); USPTO Inventorship Guidance (Feb. 2024); Pannu factors",bad:"Inventors must be natural persons. An AI-only conception can't be patented, and incorrect inventorship can invalidate.",act:"Document each person's conception and keep AI logs; list only human inventors."},
+{id:"a2",a:"ai",t:"Were any confidential or unpublished details entered into public AI tools?",good:"n",w:2,law:"§ 1839(3)(A); public-disclosure bar",bad:"Sharing secrets with an AI vendor without confidentiality terms may defeat secrecy or count as disclosure.",act:"Use enterprise AI with no-training and confidentiality terms; set an AI use policy."},
+{id:"a3",a:"ai",t:"Was the ML system trained on third-party or scraped data without a license?",good:"n",w:1,law:"17 U.S.C. § 107; pending AI training cases (e.g. Bartz v. Anthropic)",bad:"Unlicensed training data raises infringement and contract risk.",act:"Audit data provenance and prefer licensed or self-generated data."},
+{id:"a4",a:"ai",t:"Do participant consent forms address ownership and commercial use of brain-scan data and resulting designs?",good:"y",w:1,law:"Contract; 45 C.F.R. Part 46 (IRB); state biometric/neural-data laws",bad:"Unclear rights in participant data can cloud title and create privacy liability.",act:"Revise consent forms to cover data use and assignment, and consult the IRB."},
+{id:"a5",a:"ai",t:"Have the AI platforms' terms of service been reviewed for ownership and output rights?",good:"y",w:1,law:"Contract / terms of service",bad:"Platform terms may limit use or ownership of outputs.",act:"Review terms and record the model and version used for each output."}
+];
+const DEMO={p1:"y",p2:"u",p3:"y",p4:"y",p5:"u",p6:"y",t1:"y",t2:"u",t3:"y",t4:"n",t5:"u",m1:"u",m2:"y",m3:"n",m4:"u",m5:"n",c1:"y",c2:"y",c3:"u",c4:"u",c5:"n",a1:"y",a2:"u",a3:"u",a4:"u",a5:"n"};
+const $=s=>document.querySelector(s);
+const form=$("#form");
+AREAS.forEach(([k,n])=>{
+ const s=document.createElement("section");s.className="area";
+ s.innerHTML=`<h2>${n}</h2>`+Q.filter(q=>q.a===k).map(q=>`<div class="q"><p class="t">${q.t}</p><div class="opts" role="radiogroup" aria-label="${q.t}">${[["y","Yes"],["n","No"],["u","Unsure"]].map(([v,l])=>`<label><input type="radio" name="${q.id}" value="${v}">${l}</label>`).join("")}</div><div class="law">${q.law}</div></div>`).join("");
+ form.appendChild(s);
+});
+function setNames(){const v=$("#names").value.trim();$("#h1").textContent="IP Advisor"+(v?" — "+v:"");document.title="IP Advisor"+(v?" — "+v:"");}
+$("#names").addEventListener("input",setNames);
+function load(d){Q.forEach(q=>{const r=document.querySelector(`input[name=${q.id}][value=${d[q.id]||"x"}]`);document.querySelectorAll(`input[name=${q.id}]`).forEach(i=>i.checked=false);if(r)r.checked=true;});$("#out").innerHTML="";}
+$("#demo").onclick=()=>{load(DEMO);if(!$("#names").value)$("#names").value="Team (enter last names)";setNames();$("#go").click();};
+$("#clear").onclick=()=>{load({});};
+$("#print").onclick=()=>window.print();
+function rate(s,answered){if(!answered)return["NA","Not assessed"];return s===0?["Strong","Strong"]:s<2?["Mostly","Mostly sound"]:s<4?["Needs","Needs work"]:["Risk","At risk"];}
+$("#go").onclick=()=>{
+ const ans={};Q.forEach(q=>{const c=document.querySelector(`input[name=${q.id}]:checked`);ans[q.id]=c?c.value:null;});
+ let html="",steps=[];
+ AREAS.forEach(([k,n])=>{
+  let s=0,cnt=0,items=[];
+  Q.filter(q=>q.a===k).forEach(q=>{const a=ans[q.id];if(!a)return;cnt++;
+   if(a===q.good)return;
+   if(a==="u"){s+=q.w*.5;items.push(["Unresolved: "+q.t,q]);steps.push({p:q.w*.5,txt:"Confirm the facts, then act: "+q.act,law:q.law,area:n});}
+   else{s+=q.w;items.push([q.bad,q]);steps.push({p:q.w,txt:q.act,law:q.law,area:n});}
+  });
+  const [cls,lab]=rate(s,cnt);
+  html+=`<div class="res"><h2>${n} <span class="badge ${cls}">${lab}</span></h2>`+(items.length?`<ul>${items.map(i=>`<li>${i[0]} <span class="law">(${i[1].law})</span></li>`).join("")}</ul>`:cnt?`<p>No issues found from your answers.</p>`:`<p class="law">Answer at least one question in this area.</p>`)+`</div>`;
+ });
+ steps.sort((a,b)=>b.p-a.p);
+ const top=`<div class="res"><h2>Recommended steps, in priority order</h2>`+(steps.length?`<ol>${steps.map(s=>`<li><span class="pri">${s.p>=2?"Urgent. ":s.p>=1?"Important. ":""}</span>${s.txt} <span class="law">[${s.area.split(" (")[0]}; ${s.law}]</span></li>`).join("")}</ol>`:`<p>No steps to recommend yet. Answer the questions above.</p>`)+`</div>`;
+ $("#out").innerHTML="<h2>Results</h2>"+top+html;
+ $("#out").scrollIntoView({behavior:"smooth"});
+};
+</script></main></body></html>
